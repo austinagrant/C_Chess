@@ -43,7 +43,7 @@ typedef struct
     Piece taken;
     Castle castle_side;
     Piece transform;
-    
+    int eval;
 } Move;
 uint8_t anti_diag_mak[] = {
         0b11111111,
@@ -989,10 +989,60 @@ void undo_move(Move *m, Board *b){
 }
 
 
+int eval(){
+    return 0;
+}
+Move DFS_MAX(int curr_depth, int cut_off, int alpha, int beta, Board *b);
+Move DFS_MIN(int curr_depth, int cut_off, int alpha, int beta, Board *b);
 
 
 
-
+Move DFS_MAX(int curr_depth, int cut_off, int alpha, int beta, Board *b){
+    if (curr_depth >= cut_off){
+        Move m = (Move){.eval=eval()};
+        return m;
+    }
+    Move bestMove;
+    Team_Generator *white = init_teamGen(b, true);
+    Move m = next_move(white);
+    while(m.piece_type != BLANK){
+        do_move(&m, b);
+        Move min = DFS_MIN(curr_depth+1, cut_off, alpha, beta, b);
+        if (min.eval >= alpha){
+            alpha = min.eval;
+            bestMove = m;
+            if (alpha > beta){
+                undo_move(&m, b);
+                break;
+            }
+        }
+        undo_move(&m, b);
+    }
+    return bestMove;
+}
+Move DFS_MIN(int curr_depth, int cut_off, int alpha, int beta, Board *b){
+    if (curr_depth >= cut_off){
+        Move m = (Move){.eval=eval()};
+        return m;
+    }
+    Move bestMove;
+    Team_Generator *black = init_teamGen(b, false);
+    Move m = next_move(black);
+    while(m.piece_type != BLANK){
+        do_move(&m, b);
+        Move max = DFS_MAX(curr_depth+1, cut_off, alpha, beta, b);
+        if (max.eval < beta){
+            alpha = max.eval;
+            bestMove = m;
+            if (alpha > beta){
+                undo_move(&m, b);
+                break;
+            }
+        }
+        undo_move(&m, b);
+    }
+    return bestMove;
+}
 
 
 Board init_board(){
@@ -1041,26 +1091,8 @@ int main() {
     setlocale(LC_ALL, ""); 
     Board b = init_board();
     print_board(&b);
-    // printUInt64AsBinary(b.pieces[White_King]);
-    // printf("MSB: %d\n", get_MSB(b.pieces[White_King]));
-    // printUInt64AsBinary(gen->movelist[0].moves);
-    // Move_Generator *rooks = init_moveGen(generateRookMoves, &b, true, 2);
-    // Move m = get_next_move(rooks);
-    // while(m.piece_type != BLANK){
-    //     do_move(&m, &b);
-    //     print_board(&b);
-    //     undo_move(&m, &b);
-    //     print_board(&b);
-    //     m = get_next_move(rooks);
-    // }
-    // Team_Generator *white_gen = init_teamGen(&b, false);
-    // Move m = next_move(white_gen);
-    // while (m.piece_type != BLANK){
-    //     do_move(&m, &b);
-    //     print_board(&b);
-    //     undo_move(&m, &b);
-    //     print_board(&b);
-    //     m = next_move(white_gen);
-    // }
+    Move m = DFS_MAX(0, 2, INT_MIN, INT_MAX, &b);
+    do_move(&m, &b);
+    print_board(&b);
     return 0;
 }
